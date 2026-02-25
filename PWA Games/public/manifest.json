@@ -1,0 +1,26 @@
+{
+  "name": "GameVerse - Multi-Game PWA",
+  "short_name": "GameVerse",
+  "description": "Play 25 awesome games right in your browser!",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#ff6b6b",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23ff6b6b' width='192' height='192'/><text x='50%' y='50%' font-size='120' dy='.3em' text-anchor='middle' fill='white' font-weight='bold'>G</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23ff6b6b' width='512' height='512'/><text x='50%' y='50%' font-size='300' dy='.3em' text-anchor='middle' fill='white' font-weight='bold'>🎮</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["games", "entertainment"]
+}
