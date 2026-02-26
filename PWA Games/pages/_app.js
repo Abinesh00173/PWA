@@ -10,6 +10,7 @@ export default function App({ Component, pageProps }) {
         <meta name="theme-color" content="#ff6b6b" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="manifest" href="/manifest.json" />
         <title>GameVerse - Play Games</title>
       </Head>
