@@ -1,13 +1,16 @@
 {
+  "id": "/",
   "name": "GameVerse - Multi-Game PWA",
   "short_name": "GameVerse",
   "description": "Play 25 awesome games right in your browser!",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#ff6b6b",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
