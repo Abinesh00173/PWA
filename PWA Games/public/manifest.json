@@ -1,14 +1,14 @@
 {
   "id": "/",
-  "name": "NEXUS Gaming",
-  "short_name": "NEXUS",
-  "description": "The ultimate gaming destination - Play 25+ awesome games right in your browser!",
+  "name": "Nexus Gaming",
+  "short_name": "Nexus",
+  "description": "The ultimate gaming destination - Play 25+ awesome games right in your browser! Fast, fun, and free.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "window-controls-overlay"],
   "orientation": "portrait-primary",
-  "background_color": "#ffffff",
+  "background_color": "#0f0a1f",
   "theme_color": "#7c3aed",
   "prefer_related_applications": false,
   "icons": [
@@ -29,7 +29,23 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
-  "categories": ["games", "entertainment"]
+  "categories": ["games", "entertainment"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Play Games",
+      "short_name": "Play",
+      "description": "Start playing games",
+      "url": "/",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }

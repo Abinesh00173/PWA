@@ -6,15 +6,19 @@ export default function App({ Component, pageProps }) {
     <>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-        <meta name="description" content="GameVerse - Multi-Game PWA" />
-        <meta name="theme-color" content="#ff6b6b" />
+        <meta name="description" content="Nexus Gaming - The ultimate gaming destination. Play 25+ awesome games right in your browser!" />
+        <meta name="theme-color" content="#7c3aed" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Nexus" />
+        <meta name="application-name" content="Nexus Gaming" />
+        <meta name="msapplication-TileColor" content="#7c3aed" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <link rel="manifest" href="/manifest.json" />
-        <title>GameVerse - Play Games</title>
+        <title>Nexus Gaming - Play Awesome Games</title>
       </Head>
       <Component {...pageProps} />
     </>
