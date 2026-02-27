@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 export default function useGameAppState() {
   const [currentGame, setCurrentGame] = useState(null);
+  const [currentView, setCurrentView] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -35,6 +36,13 @@ export default function useGameAppState() {
 
   const goHome = () => {
     setCurrentGame(null);
+    setCurrentView('home');
+    setMenuOpen(false);
+  };
+
+  const navigateTo = (view) => {
+    setCurrentView(view);
+    setCurrentGame(null);
     setMenuOpen(false);
   };
 
@@ -58,11 +66,13 @@ export default function useGameAppState() {
 
   return {
     currentGame,
+    currentView,
     menuOpen,
     scoresOpen,
     soundEnabled,
     startGame,
     goHome,
+    navigateTo,
     toggleMenu,
     toggleTheme,
     toggleSound,

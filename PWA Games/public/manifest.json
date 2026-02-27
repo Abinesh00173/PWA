@@ -1,15 +1,15 @@
 {
   "id": "/",
-  "name": "GameVerse - Multi-Game PWA",
-  "short_name": "GameVerse",
-  "description": "Play 25 awesome games right in your browser!",
+  "name": "NEXUS Gaming",
+  "short_name": "NEXUS",
+  "description": "The ultimate gaming destination - Play 25+ awesome games right in your browser!",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "window-controls-overlay"],
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#ff6b6b",
+  "theme_color": "#7c3aed",
   "prefer_related_applications": false,
   "icons": [
     {
