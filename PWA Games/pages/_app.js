@@ -13,10 +13,8 @@ export default function App({ Component, pageProps }) {
         <meta name="apple-mobile-web-app-title" content="Nexus" />
         <meta name="application-name" content="Nexus Gaming" />
         <meta name="msapplication-TileColor" content="#7c3aed" />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="icon" href="/app-icon.png.jpeg" type="image/jpeg" />
+        <link rel="apple-touch-icon" href="/app-icon.png.jpeg" />
         <link rel="manifest" href="/manifest.json" />
         <title>Nexus Gaming - Play Awesome Games</title>
       </Head>
