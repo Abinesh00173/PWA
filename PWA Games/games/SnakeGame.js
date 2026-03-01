@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GameHeaderBar } from './GameUIComponents';
-import { GameOverlay } from './GameOverlay';
-import { DpadControlsPanel } from './DpadControlsPanel';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { GameOverlay } from '../components/GameOverlay';
+import { DpadControlsPanel } from '../components/DpadControlsPanel';
 
 export default function SnakeGame({ goHome, soundEnabled }) {
   const canvasRef = useRef(null);

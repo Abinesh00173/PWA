@@ -1,9 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay } from '../components/StartOverlay';
 
 export default function CheckersGame({ goHome }) {
   const [board, setBoard] = useState(initializeBoard());
   const [score, setScore] = useState(0);
   const [message, setMessage] = useState('Game Started');
+  const [gameStatus, setGameStatus] = useState('start');
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const startGame = () => {
+    setBoard(initializeBoard());
+    setScore(0);
+    setMessage('Your turn - Blue pieces');
+    setGameStatus('playing');
+  };
 
   function initializeBoard() {
     const b = Array(64).fill(0);
@@ -19,17 +37,29 @@ export default function CheckersGame({ goHome }) {
   }
 
   const handlePieceClick = (idx) => {
+    if (gameStatus !== 'playing') return;
     setBoard(board);
   };
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Checkers</h3>
-        <span>{score}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Checkers" score={score} showBest={false} />
       <div className="game-canvas-container">
+        {gameStatus === 'start' && (
+          <StartOverlay
+            isDesktop={isDesktop}
+            icon="⬛"
+            title="CHECKERS"
+            subtitle="Board Game"
+            features={[
+              { icon: '♟️', text: 'Move' },
+              { icon: '⬆️', text: 'Jump' },
+              { icon: '🎯', text: 'Capture' }
+            ]}
+            onStart={startGame}
+            highScore={0}
+          />
+        )}
         <div style={{ textAlign: 'center', padding: '20px' }}>
           <div style={{ fontSize: '1.2em', marginBottom: '20px' }}>{message}</div>
           <div style={{

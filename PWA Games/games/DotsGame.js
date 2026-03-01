@@ -1,10 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 export default function DotsGame({ goHome, soundEnabled }) {
   const canvasRef = useRef(null);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
   const [gameActive, setGameActive] = useState(true);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
   const gameStateRef = useRef({
     dots: [],
     selectedDots: [],
@@ -13,7 +18,18 @@ export default function DotsGame({ goHome, soundEnabled }) {
   });
 
   useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const stored = parseInt(localStorage.getItem('dots_highscore')) || 0;
+    setHighScore(stored);
+  }, []);
+
+  const startGame = () => {
+    setScore(0);
+    setTimeLeft(60);
+    setGameActive(true);
     const state = gameStateRef.current;
+    state.dots = [];
+    state.selectedDots = [];
     for (let i = 0; i < 9; i++) {
       state.dots.push({
         x: (i % 3) * 80 + 80,
@@ -22,12 +38,19 @@ export default function DotsGame({ goHome, soundEnabled }) {
         selected: false
       });
     }
-  }, []);
+    setGameStatus('playing');
+  };
 
   useEffect(() => {
+    if (gameStatus !== 'playing') return;
     if (timeLeft <= 0) {
       setGameActive(false);
-      localStorage.setItem('dots_score', Math.max(parseInt(localStorage.getItem('dots_score')) || 0, score));
+      const finalScore = score;
+      if (finalScore > highScore) {
+        setHighScore(finalScore);
+        localStorage.setItem('dots_highscore', finalScore);
+      }
+      setGameStatus('gameover');
       return;
     }
 
@@ -40,9 +63,10 @@ export default function DotsGame({ goHome, soundEnabled }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, score]);
+  }, [timeLeft, score, gameStatus, highScore]);
 
   useEffect(() => {
+    if (gameStatus !== 'playing') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -113,7 +137,6 @@ export default function DotsGame({ goHome, soundEnabled }) {
         const points = state.selectedDots.length * 10;
         setScore(prev => {
           const newScore = prev + points;
-          localStorage.setItem('dots_score', newScore);
           return newScore;
         });
       }
@@ -131,21 +154,43 @@ export default function DotsGame({ goHome, soundEnabled }) {
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [gameActive]);
+  }, [gameActive, gameStatus]);
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Dots</h3>
-        <span>{score}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Dots" score={score} showBest={false} />
       <div className="game-canvas-container">
         <canvas ref={canvasRef}></canvas>
-        <div style={{ marginTop: '10px', fontSize: '1.2em', fontWeight: 'bold', textAlign: 'center' }}>
-          Time: {timeLeft}s
-        </div>
+        {gameStatus === 'playing' && (
+          <div style={{ marginTop: '10px', fontSize: '1.2em', fontWeight: 'bold', textAlign: 'center' }}>
+            Time: {timeLeft}s
+          </div>
+        )}
       </div>
+      {gameStatus === 'start' && (
+        <StartOverlay
+          isDesktop={isDesktop}
+          icon="⚫"
+          title="DOTS"
+          subtitle="Connect Game"
+          features={[
+            { icon: '🔗', text: 'Connect' },
+            { icon: '⏱️', text: 'Timed' },
+            { icon: '🎯', text: 'Chain' }
+          ]}
+          onStart={startGame}
+          highScore={highScore}
+        />
+      )}
+      {gameStatus === 'gameover' && (
+        <GameOverOverlay
+          isDesktop={isDesktop}
+          score={score}
+          highScore={highScore}
+          isNewHighScore={score >= highScore && score > 0}
+          onRestart={startGame}
+        />
+      )}
     </div>
   );
 }

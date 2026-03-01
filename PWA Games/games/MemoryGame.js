@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 export default function MemoryGame({ goHome, soundEnabled }) {
   const [cards, setCards] = useState([]);
@@ -6,19 +8,32 @@ export default function MemoryGame({ goHome, soundEnabled }) {
   const [matched, setMatched] = useState([]);
   const [moves, setMoves] = useState(0);
   const [isWon, setIsWon] = useState(false);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
 
   useEffect(() => {
-    initGame();
+    setIsDesktop(window.innerWidth >= 768);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    setHighScore(parseInt(localStorage.getItem('memory_score')) || 0);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
     if (matched.length === 8 && matched.length > 0) {
       setIsWon(true);
-      const score = 100 - moves;
+      const score = Math.max(0, 100 - moves);
       const saved = parseInt(localStorage.getItem('memory_score')) || 0;
-      if (score > saved) localStorage.setItem('memory_score', score);
+      if (score > saved) {
+        localStorage.setItem('memory_score', score);
+        setIsNewHighScore(true);
+        setHighScore(score);
+      }
+      setGameStatus('gameover');
     }
-  }, [matched]);
+  }, [matched, moves]);
 
   const initGame = () => {
     const symbols = ['🌟', '🎸', '🎲', '🎯', '🎪', '🎨', '🎭', '🎬'];
@@ -28,9 +43,12 @@ export default function MemoryGame({ goHome, soundEnabled }) {
     setMatched([]);
     setMoves(0);
     setIsWon(false);
+    setIsNewHighScore(false);
+    setGameStatus('playing');
   };
 
   const handleCardClick = (idx) => {
+    if (gameStatus !== 'playing') return;
     if (flipped.includes(idx) || matched.includes(idx) || flipped.length === 2) return;
 
     const newFlipped = [...flipped, idx];
@@ -51,12 +69,33 @@ export default function MemoryGame({ goHome, soundEnabled }) {
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Memory Game</h3>
-        <span>Pairs: {pairsMatched}/8</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Memory Game" score={`Pairs: ${pairsMatched}/8`} showBest={false} />
       <div className="game-canvas-container">
+        {gameStatus === 'start' && (
+          <StartOverlay
+            isDesktop={isDesktop}
+            icon="🧠"
+            title="MEMORY"
+            subtitle="Match Game"
+            features={[
+              { icon: '🃏', text: 'Flip' },
+              { icon: '🎯', text: 'Match' },
+              { icon: '💭', text: 'Remember' }
+            ]}
+            onStart={initGame}
+            highScore={highScore}
+          />
+        )}
+        {gameStatus === 'gameover' && (
+          <GameOverOverlay
+            isDesktop={isDesktop}
+            score={Math.max(0, 100 - moves)}
+            highScore={highScore}
+            isNewHighScore={isNewHighScore}
+            onRestart={initGame}
+          />
+        )}
+        {gameStatus === 'playing' && (
         <div style={{ textAlign: 'center', padding: '20px' }}>
           <div style={{ fontSize: '1.1em', marginBottom: '15px' }}>Moves: {moves}</div>
           <div style={{
@@ -106,6 +145,7 @@ export default function MemoryGame({ goHome, soundEnabled }) {
             New Game
           </button>
         </div>
+        )}
       </div>
     </div>
   );

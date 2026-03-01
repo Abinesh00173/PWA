@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 const WORDS = ['javascript', 'programming', 'developer', 'gameverse', 'react', 'nextjs', 'webdev', 'coding', 'browser', 'computer'];
 
@@ -8,9 +10,18 @@ export default function HangmanGame({ goHome }) {
   const [wrong, setWrong] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [currentScore, setCurrentScore] = useState(0);
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
 
   useEffect(() => {
-    startNewGame();
+    setIsDesktop(window.innerWidth >= 768);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    setHighScore(parseInt(localStorage.getItem('hangman_score')) || 0);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const startNewGame = () => {
@@ -20,10 +31,13 @@ export default function HangmanGame({ goHome }) {
     setWrong(0);
     setGameOver(false);
     setWon(false);
+    setCurrentScore(0);
+    setIsNewHighScore(false);
+    setGameStatus('playing');
   };
 
   const handleGuess = (letter) => {
-    if (guessed.includes(letter) || gameOver || won) return;
+    if (guessed.includes(letter) || gameOver || won || gameStatus !== 'playing') return;
 
     const newGuessed = [...guessed, letter];
     setGuessed(newGuessed);
@@ -33,15 +47,23 @@ export default function HangmanGame({ goHome }) {
       setWrong(newWrong);
       if (newWrong >= 6) {
         setGameOver(true);
+        setCurrentScore(0);
+        setGameStatus('gameover');
       }
     }
 
     // Check if won
     if (word.split('').every(l => newGuessed.includes(l))) {
       setWon(true);
-      const score = 100 - wrong;
+      const score = 100 - wrong * 10;
+      setCurrentScore(score);
       const saved = parseInt(localStorage.getItem('hangman_score')) || 0;
-      if (score > saved) localStorage.setItem('hangman_score', score);
+      if (score > saved) {
+        localStorage.setItem('hangman_score', score);
+        setIsNewHighScore(true);
+        setHighScore(score);
+      }
+      setGameStatus('gameover');
     }
   };
 
@@ -49,12 +71,33 @@ export default function HangmanGame({ goHome }) {
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Hangman</h3>
-        <span>{Math.max(0, 6 - wrong)}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Hangman" score={Math.max(0, 6 - wrong)} showBest={false} />
       <div className="game-canvas-container">
+        {gameStatus === 'start' && (
+          <StartOverlay
+            isDesktop={isDesktop}
+            icon="📝"
+            title="HANGMAN"
+            subtitle="Word Game"
+            features={[
+              { icon: '🤔', text: 'Guess' },
+              { icon: '🔤', text: 'Letters' },
+              { icon: '🏆', text: 'Win' }
+            ]}
+            onStart={startNewGame}
+            highScore={highScore}
+          />
+        )}
+        {gameStatus === 'gameover' && (
+          <GameOverOverlay
+            isDesktop={isDesktop}
+            score={currentScore}
+            highScore={highScore}
+            isNewHighScore={isNewHighScore}
+            onRestart={startNewGame}
+          />
+        )}
+        {gameStatus === 'playing' && (
         <div style={{ textAlign: 'center', padding: '20px' }}>
           <div style={{ fontSize: '3em', marginBottom: '20px' }}>{hangman[wrong]}</div>
           
@@ -108,6 +151,7 @@ export default function HangmanGame({ goHome }) {
             New Game
           </button>
         </div>
+        )}
       </div>
     </div>
   );

@@ -1,18 +1,43 @@
 import { useState, useEffect, useRef } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 export default function TapCrushGame({ goHome, soundEnabled }) {
   const canvasRef = useRef(null);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
   const gameStateRef = useRef({
     shapes: [],
     gameActive: true
   });
 
   useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const stored = parseInt(localStorage.getItem('tapcrush_highscore')) || 0;
+    setHighScore(stored);
+  }, []);
+
+  const startGame = () => {
+    setScore(0);
+    setTimeLeft(30);
+    gameStateRef.current.shapes = [];
+    gameStateRef.current.gameActive = true;
+    setGameStatus('playing');
+  };
+
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
     if (timeLeft <= 0) {
       gameStateRef.current.gameActive = false;
-      localStorage.setItem('tapcrush_score', Math.max(parseInt(localStorage.getItem('tapcrush_score')) || 0, score));
+      const finalScore = score;
+      if (finalScore > highScore) {
+        setHighScore(finalScore);
+        localStorage.setItem('tapcrush_highscore', finalScore);
+      }
+      setGameStatus('gameover');
       return;
     }
 
@@ -21,9 +46,10 @@ export default function TapCrushGame({ goHome, soundEnabled }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, score]);
+  }, [timeLeft, score, gameStatus, highScore]);
 
   useEffect(() => {
+    if (gameStatus !== 'playing') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -81,7 +107,6 @@ export default function TapCrushGame({ goHome, soundEnabled }) {
           const points = Math.floor(shape.size / 5) * 10;
           setScore(prev => {
             const newScore = prev + points;
-            localStorage.setItem('tapcrush_score', newScore);
             return newScore;
           });
           break;
@@ -93,21 +118,43 @@ export default function TapCrushGame({ goHome, soundEnabled }) {
     draw();
 
     return () => canvas.removeEventListener('click', handleClick);
-  }, []);
+  }, [gameStatus]);
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Tap Crush</h3>
-        <span>{score}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Tap Crush" score={score} showBest={false} />
       <div className="game-canvas-container">
         <canvas ref={canvasRef}></canvas>
-        <div style={{ marginTop: '10px', fontSize: '1.2em', fontWeight: 'bold', textAlign: 'center' }}>
-          Time: {timeLeft}s
-        </div>
+        {gameStatus === 'playing' && (
+          <div style={{ marginTop: '10px', fontSize: '1.2em', fontWeight: 'bold', textAlign: 'center' }}>
+            Time: {timeLeft}s
+          </div>
+        )}
       </div>
+      {gameStatus === 'start' && (
+        <StartOverlay
+          isDesktop={isDesktop}
+          icon="💎"
+          title="TAP CRUSH"
+          subtitle="Match Game"
+          features={[
+            { icon: '👆', text: 'Tap' },
+            { icon: '💥', text: 'Crush' },
+            { icon: '⏱️', text: 'Timed' }
+          ]}
+          onStart={startGame}
+          highScore={highScore}
+        />
+      )}
+      {gameStatus === 'gameover' && (
+        <GameOverOverlay
+          isDesktop={isDesktop}
+          score={score}
+          highScore={highScore}
+          isNewHighScore={score >= highScore && score > 0}
+          onRestart={startGame}
+        />
+      )}
     </div>
   );
 }

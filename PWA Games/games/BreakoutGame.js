@@ -1,14 +1,48 @@
 import { useState, useEffect, useRef } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 export default function BreakoutGame({ goHome, soundEnabled }) {
   const canvasRef = useRef(null);
   const [score, setScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
   const lastTimeRef = useRef(0);
   const gameStateRef = useRef({
     paddleX: 150, ballX: 200, ballY: 300, ballDX: 3, ballDY: -3, score: 0, gameRunning: true, bricks: []
   });
 
   useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('breakout_highscore');
+    if (saved) setHighScore(parseInt(saved, 10));
+  }, []);
+
+  const startGame = () => {
+    const bricks = [];
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 5; col++) {
+        bricks.push({ x: col * 80, y: row * 40 + 20, width: 75, height: 35 });
+      }
+    }
+    gameStateRef.current = {
+      paddleX: 150, ballX: 200, ballY: 300, ballDX: 3, ballDY: -3, score: 0, gameRunning: true, bricks
+    };
+    lastTimeRef.current = 0;
+    setScore(0);
+    setGameStatus('playing');
+  };
+
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -16,13 +50,6 @@ export default function BreakoutGame({ goHome, soundEnabled }) {
     canvas.height = 400;
     const ctx = canvas.getContext('2d');
     const state = gameStateRef.current;
-
-    // Initialize bricks
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 5; col++) {
-        state.bricks.push({ x: col * 80, y: row * 40 + 20, width: 75, height: 35 });
-      }
-    }
 
     const handleMouseMove = (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -48,9 +75,12 @@ export default function BreakoutGame({ goHome, soundEnabled }) {
 
       if (state.ballY > 400) {
         state.gameRunning = false;
-        if (state.score > parseInt(localStorage.getItem('breakout_score') || 0)) {
-          localStorage.setItem('breakout_score', state.score);
+        const finalScore = state.score;
+        if (finalScore > highScore) {
+          setHighScore(finalScore);
+          localStorage.setItem('breakout_highscore', finalScore);
         }
+        setGameStatus('gameover');
         return;
       }
 
@@ -90,17 +120,38 @@ export default function BreakoutGame({ goHome, soundEnabled }) {
 
     requestAnimationFrame(gameLoop);
     return () => canvas.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [gameStatus, highScore]);
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Breakout</h3>
-        <span>{score}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Breakout" score={score} showBest={false} />
       <div className="game-canvas-container">
-        <canvas ref={canvasRef}></canvas>
+        <div style={{ position: 'relative' }}>
+          <canvas ref={canvasRef} width={400} height={400}></canvas>
+          {gameStatus === 'start' && (
+            <StartOverlay
+              isDesktop={isDesktop}
+              icon="🧱"
+              title="BREAKOUT"
+              features={[
+                { icon: '🎯', text: 'Aim' },
+                { icon: '🏓', text: 'Bounce' },
+                { icon: '💥', text: 'Destroy' }
+              ]}
+              onStart={startGame}
+              highScore={highScore}
+            />
+          )}
+          {gameStatus === 'gameover' && (
+            <GameOverOverlay
+              isDesktop={isDesktop}
+              score={score}
+              highScore={highScore}
+              isNewHighScore={score >= highScore && score > 0}
+              onRestart={startGame}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 export default function RacingGame({ goHome, soundEnabled }) {
   const canvasRef = useRef(null);
   const [score, setScore] = useState(0);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
   const lastTimeRef = useRef(0);
   const gameStateRef = useRef({
     carX: 150, carY: 400, carWidth: 30, carHeight: 50,
@@ -10,6 +15,26 @@ export default function RacingGame({ goHome, soundEnabled }) {
   });
 
   useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const stored = parseInt(localStorage.getItem('racing_highscore')) || 0;
+    setHighScore(stored);
+  }, []);
+
+  const startGame = () => {
+    setScore(0);
+    lastTimeRef.current = 0;
+    const state = gameStateRef.current;
+    state.carX = 150;
+    state.carY = 400;
+    state.obstacles = [];
+    state.gameActive = true;
+    state.roadOffset = 0;
+    state.score = 0;
+    setGameStatus('playing');
+  };
+
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -44,6 +69,12 @@ export default function RacingGame({ goHome, soundEnabled }) {
         if (obs.y > state.carY - 50 && obs.y < state.carY + state.carHeight &&
             obs.x > state.carX - 20 && obs.x < state.carX + state.carWidth + 20) {
           state.gameActive = false;
+          const finalScore = state.score;
+          if (finalScore > highScore) {
+            setHighScore(finalScore);
+            localStorage.setItem('racing_highscore', finalScore);
+          }
+          setGameStatus('gameover');
         }
       }
 
@@ -58,7 +89,6 @@ export default function RacingGame({ goHome, soundEnabled }) {
           const newScore = state.score + 1;
           state.score = newScore;
           setScore(newScore);
-          localStorage.setItem('racing_score', newScore);
         }
       }
 
@@ -93,15 +123,6 @@ export default function RacingGame({ goHome, soundEnabled }) {
       ctx.fillRect(state.carX + 5, state.carY + 10, 8, 8);
       ctx.fillRect(state.carX + 17, state.carY + 10, 8, 8);
 
-      if (!state.gameActive) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, 300, 500);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 24px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Crash!', 150, 250);
-      }
-
       if (state.gameActive) {
         requestAnimationFrame(gameLoop);
       }
@@ -111,18 +132,38 @@ export default function RacingGame({ goHome, soundEnabled }) {
     gameLoop();
 
     return () => canvas.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [gameStatus, highScore]);
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Racing</h3>
-        <span>{score}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Racing" score={score} showBest={false} />
       <div className="game-canvas-container">
         <canvas ref={canvasRef}></canvas>
       </div>
+      {gameStatus === 'start' && (
+        <StartOverlay
+          isDesktop={isDesktop}
+          icon="🏎️"
+          title="RACING"
+          subtitle="Speed Game"
+          features={[
+            { icon: '🏎️', text: 'Drive' },
+            { icon: '🚧', text: 'Dodge' },
+            { icon: '💨', text: 'Speed' }
+          ]}
+          onStart={startGame}
+          highScore={highScore}
+        />
+      )}
+      {gameStatus === 'gameover' && (
+        <GameOverOverlay
+          isDesktop={isDesktop}
+          score={score}
+          highScore={highScore}
+          isNewHighScore={score >= highScore && score > 0}
+          onRestart={startGame}
+        />
+      )}
     </div>
   );
 }

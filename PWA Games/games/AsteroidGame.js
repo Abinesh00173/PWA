@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 export default function AsteroidGame({ goHome, soundEnabled }) {
   const canvasRef = useRef(null);
   const [score, setScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
   const lastTimeRef = useRef(0);
   const gameStateRef = useRef({
     shipX: 150, shipY: 250, shipAngle: 0, velocity: { x: 0, y: 0 },
@@ -10,16 +15,21 @@ export default function AsteroidGame({ goHome, soundEnabled }) {
   });
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    setIsDesktop(window.innerWidth >= 768);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-    canvas.width = 400;
-    canvas.height = 500;
-    const ctx = canvas.getContext('2d');
-    const state = gameStateRef.current;
+  useEffect(() => {
+    const saved = localStorage.getItem('asteroid_highscore');
+    if (saved) setHighScore(parseInt(saved, 10));
+  }, []);
 
+  const startGame = () => {
+    const asteroids = [];
     Array(5).fill().forEach(() => {
-      state.asteroids.push({
+      asteroids.push({
         x: Math.random() * 400,
         y: Math.random() * 200,
         vx: (Math.random() - 0.5) * 3,
@@ -27,6 +37,25 @@ export default function AsteroidGame({ goHome, soundEnabled }) {
         size: 20
       });
     });
+    gameStateRef.current = {
+      shipX: 150, shipY: 250, shipAngle: 0, velocity: { x: 0, y: 0 },
+      bullets: [], asteroids, gameActive: true, keys: {}, score: 0
+    };
+    lastTimeRef.current = 0;
+    setScore(0);
+    setGameStatus('playing');
+  };
+
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    canvas.width = 400;
+    canvas.height = 500;
+    const ctx = canvas.getContext('2d');
+    const state = gameStateRef.current;
 
     const handleKeyDown = (e) => {
       state.keys[e.key.toLowerCase()] = true;
@@ -46,6 +75,8 @@ export default function AsteroidGame({ goHome, soundEnabled }) {
     };
 
     const gameLoop = (timestamp) => {
+      if (!state.gameActive) return;
+
       if (!lastTimeRef.current) {
         lastTimeRef.current = timestamp;
       }
@@ -82,10 +113,24 @@ export default function AsteroidGame({ goHome, soundEnabled }) {
         if (ast.x > 400) ast.x = 0;
         if (ast.y < 0) ast.y = 500;
         if (ast.y > 500) ast.y = 0;
+
+        // Check collision with ship
+        const dx = state.shipX - ast.x;
+        const dy = state.shipY - ast.y;
+        if (Math.hypot(dx, dy) < ast.size + 10) {
+          state.gameActive = false;
+          const finalScore = state.score;
+          if (finalScore > highScore) {
+            setHighScore(finalScore);
+            localStorage.setItem('asteroid_highscore', finalScore);
+          }
+          setGameStatus('gameover');
+        }
       });
 
       for (let i = state.bullets.length - 1; i >= 0; i--) {
         for (let j = state.asteroids.length - 1; j >= 0; j--) {
+          if (!state.bullets[i]) break;
           const dx = state.bullets[i].x - state.asteroids[j].x;
           const dy = state.bullets[i].y - state.asteroids[j].y;
           if (Math.hypot(dx, dy) < state.asteroids[j].size) {
@@ -93,8 +138,17 @@ export default function AsteroidGame({ goHome, soundEnabled }) {
             const newScore = state.score + state.asteroids[j].size;
             state.score = newScore;
             setScore(newScore);
-            localStorage.setItem('asteroid_score', newScore);
             state.asteroids.splice(j, 1);
+            // Spawn new asteroid
+            if (Math.random() < 0.5) {
+              state.asteroids.push({
+                x: Math.random() < 0.5 ? 0 : 400,
+                y: Math.random() * 500,
+                vx: (Math.random() - 0.5) * 3,
+                vy: (Math.random() - 0.5) * 3,
+                size: 15 + Math.random() * 10
+              });
+            }
             break;
           }
         }
@@ -139,23 +193,44 @@ export default function AsteroidGame({ goHome, soundEnabled }) {
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    gameLoop();
+    requestAnimationFrame(gameLoop);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [gameStatus, highScore]);
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Asteroids</h3>
-        <span>{score}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Asteroids" score={score} showBest={false} />
       <div className="game-canvas-container">
-        <canvas ref={canvasRef}></canvas>
+        <div style={{ position: 'relative' }}>
+          <canvas ref={canvasRef} width={400} height={500}></canvas>
+          {gameStatus === 'start' && (
+            <StartOverlay
+              isDesktop={isDesktop}
+              icon="🚀"
+              title="ASTEROIDS"
+              features={[
+                { icon: '🔄', text: 'Rotate' },
+                { icon: '🔥', text: 'Thrust' },
+                { icon: '💥', text: 'Shoot' }
+              ]}
+              onStart={startGame}
+              highScore={highScore}
+            />
+          )}
+          {gameStatus === 'gameover' && (
+            <GameOverOverlay
+              isDesktop={isDesktop}
+              score={score}
+              highScore={highScore}
+              isNewHighScore={score >= highScore && score > 0}
+              onRestart={startGame}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

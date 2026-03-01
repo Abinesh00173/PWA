@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 const QUESTIONS = [
   { q: 'What is the capital of France?', opts: ['London', 'Paris', 'Berlin', 'Madrid'], ans: 1 },
@@ -16,11 +18,33 @@ export default function QuizGame({ goHome }) {
   const [answered, setAnswered] = useState(false);
   const [selected, setSelected] = useState(null);
   const [gameOver, setGameOver] = useState(false);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
+
+  useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    setHighScore(parseInt(localStorage.getItem('quiz_score')) || 0);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const startGame = () => {
+    setCurrent(0);
+    setScore(0);
+    setAnswered(false);
+    setSelected(null);
+    setGameOver(false);
+    setIsNewHighScore(false);
+    setGameStatus('playing');
+  };
 
   const question = QUESTIONS[current];
 
   const handleAnswer = (idx) => {
-    if (answered) return;
+    if (answered || gameStatus !== 'playing') return;
     setSelected(idx);
     setAnswered(true);
     if (idx === question.ans) {
@@ -36,25 +60,29 @@ export default function QuizGame({ goHome }) {
       setSelected(null);
     } else {
       const saved = parseInt(localStorage.getItem('quiz_score')) || 0;
-      if (score > saved) localStorage.setItem('quiz_score', score);
+      const finalScore = score;
+      if (finalScore > saved) {
+        localStorage.setItem('quiz_score', finalScore);
+        setIsNewHighScore(true);
+        setHighScore(finalScore);
+      }
       setGameOver(true);
+      setGameStatus('gameover');
     }
   };
 
   if (gameOver) {
     return (
       <div className="screen">
-        <div className="game-header">
-          <button className="back-btn" onClick={goHome}>← Back</button>
-          <h3>Quiz Master</h3>
-          <span>{score}</span>
-        </div>
+        <GameHeaderBar onBack={goHome} title="Quiz Master" score={score} showBest={false} />
         <div className="game-canvas-container">
-          <div style={{ textAlign: 'center', padding: '40px', fontSize: '1.5em' }}>
-            <div style={{ marginBottom: '20px' }}>🎉 Quiz Complete!</div>
-            <div style={{ fontSize: '2em', marginBottom: '20px', fontWeight: 'bold' }}>Final Score: {score}/{QUESTIONS.length * 10}</div>
-            <button onClick={goHome} style={{ padding: '10px 20px', fontSize: '1em', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Back to Home</button>
-          </div>
+          <GameOverOverlay
+            isDesktop={isDesktop}
+            score={score}
+            highScore={highScore}
+            isNewHighScore={isNewHighScore}
+            onRestart={startGame}
+          />
         </div>
       </div>
     );
@@ -62,12 +90,24 @@ export default function QuizGame({ goHome }) {
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Quiz Master</h3>
-        <span>{current + 1}/{QUESTIONS.length}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Quiz Master" score={`${current + 1}/${QUESTIONS.length}`} showBest={false} />
       <div className="game-canvas-container">
+        {gameStatus === 'start' && (
+          <StartOverlay
+            isDesktop={isDesktop}
+            icon="❓"
+            title="QUIZ"
+            subtitle="Trivia Game"
+            features={[
+              { icon: '✅', text: 'Answer' },
+              { icon: '💯', text: 'Score' },
+              { icon: '📚', text: 'Learn' }
+            ]}
+            onStart={startGame}
+            highScore={highScore}
+          />
+        )}
+        {gameStatus === 'playing' && (
         <div style={{ padding: '20px', textAlign: 'center' }}>
           <div style={{ fontSize: '1.2em', marginBottom: '30px', fontWeight: 'bold' }}>{question.q}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px', marginBottom: '20px' }}>
@@ -100,6 +140,7 @@ export default function QuizGame({ goHome }) {
             </button>
           )}
         </div>
+        )}
       </div>
     </div>
   );

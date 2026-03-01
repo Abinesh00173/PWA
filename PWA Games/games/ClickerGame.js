@@ -1,30 +1,60 @@
 import { useState, useEffect } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay } from '../components/StartOverlay';
 
 export default function ClickerGame({ goHome }) {
-  const [score, setScore] = useState(parseInt(localStorage.getItem('clicker_score')) || 0);
+  const [score, setScore] = useState(0);
   const [cps, setCps] = useState(1);
   const [autoClickers, setAutoClickers] = useState(0);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    setHighScore(parseInt(localStorage.getItem('clicker_highscore')) || 0);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const startGame = () => {
+    setScore(0);
+    setCps(1);
+    setAutoClickers(0);
+    setGameStatus('playing');
+  };
+
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
     const interval = setInterval(() => {
-      const newScore = parseInt(localStorage.getItem('clicker_score')) || 0;
       setScore(prev => {
         const updated = prev + autoClickers;
+        if (updated > highScore) {
+          setHighScore(updated);
+          localStorage.setItem('clicker_highscore', updated);
+        }
         localStorage.setItem('clicker_score', updated);
         return updated;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [autoClickers]);
+  }, [autoClickers, gameStatus, highScore]);
 
   const handleClick = () => {
+    if (gameStatus !== 'playing') return;
     const newScore = score + cps;
     setScore(newScore);
+    if (newScore > highScore) {
+      setHighScore(newScore);
+      localStorage.setItem('clicker_highscore', newScore);
+    }
     localStorage.setItem('clicker_score', newScore);
   };
 
   const buyAutoClicker = () => {
+    if (gameStatus !== 'playing') return;
     const cost = 50 * (autoClickers + 1);
     if (score >= cost) {
       const newScore = score - cost;
@@ -38,12 +68,24 @@ export default function ClickerGame({ goHome }) {
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Clicker</h3>
-        <span>{score}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Clicker" score={score} showBest={false} />
       <div className="game-canvas-container">
+        {gameStatus === 'start' && (
+          <StartOverlay
+            isDesktop={isDesktop}
+            icon="👆"
+            title="CLICKER"
+            subtitle="Tap Game"
+            features={[
+              { icon: '👆', text: 'Tap' },
+              { icon: '💯', text: 'Score' },
+              { icon: '⚡', text: 'Speed' }
+            ]}
+            onStart={startGame}
+            highScore={highScore}
+          />
+        )}
+        {gameStatus === 'playing' && (
         <div style={{ textAlign: 'center', padding: '40px' }}>
           <div style={{ fontSize: '2em', marginBottom: '20px' }}>🍪 {score}</div>
           <button
@@ -82,6 +124,7 @@ export default function ClickerGame({ goHome }) {
             Auto Clickers: {autoClickers}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

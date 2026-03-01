@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 export default function BallJumpGame({ goHome, soundEnabled }) {
   const canvasRef = useRef(null);
   const [score, setScore] = useState(0);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
   const lastTimeRef = useRef(0);
   const gameStateRef = useRef({
     ballX: 50, ballY: 250, ballVX: 3, ballVY: 0, gravity: 0.2,
@@ -10,6 +15,35 @@ export default function BallJumpGame({ goHome, soundEnabled }) {
   });
 
   useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const stored = parseInt(localStorage.getItem('balljump_highscore')) || 0;
+    setHighScore(stored);
+  }, []);
+
+  const startGame = () => {
+    setScore(0);
+    lastTimeRef.current = 0;
+    const state = gameStateRef.current;
+    state.ballX = 50;
+    state.ballY = 250;
+    state.ballVX = 3;
+    state.ballVY = 0;
+    state.gameActive = true;
+    state.score = 0;
+    state.platforms = [];
+    for (let i = 0; i < 8; i++) {
+      state.platforms.push({
+        x: Math.random() * 200,
+        y: i * 70 + 50,
+        width: 60,
+        height: 10
+      });
+    }
+    setGameStatus('playing');
+  };
+
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -76,6 +110,12 @@ export default function BallJumpGame({ goHome, soundEnabled }) {
 
       if (state.ballY > 500) {
         state.gameActive = false;
+        const finalScore = state.score;
+        if (finalScore > highScore) {
+          setHighScore(finalScore);
+          localStorage.setItem('balljump_highscore', finalScore);
+        }
+        setGameStatus('gameover');
       }
 
       ctx.fillStyle = '#1a1a1a';
@@ -97,13 +137,6 @@ export default function BallJumpGame({ goHome, soundEnabled }) {
 
       if (state.gameActive) {
         requestAnimationFrame(gameLoop);
-      } else {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, 300, 500);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 24px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Game Over!', 150, 250);
       }
     };
 
@@ -111,18 +144,38 @@ export default function BallJumpGame({ goHome, soundEnabled }) {
     requestAnimationFrame(gameLoop);
 
     return () => canvas.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [gameStatus, highScore]);
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Ball Jump</h3>
-        <span>{score}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Ball Jump" score={score} showBest={false} />
       <div className="game-canvas-container">
         <canvas ref={canvasRef}></canvas>
       </div>
+      {gameStatus === 'start' && (
+        <StartOverlay
+          isDesktop={isDesktop}
+          icon="🏀"
+          title="BALL JUMP"
+          subtitle="Bounce Game"
+          features={[
+            { icon: '🎯', text: 'Aim' },
+            { icon: '⬆️', text: 'Bounce' },
+            { icon: '🏆', text: 'Score' }
+          ]}
+          onStart={startGame}
+          highScore={highScore}
+        />
+      )}
+      {gameStatus === 'gameover' && (
+        <GameOverOverlay
+          isDesktop={isDesktop}
+          score={score}
+          highScore={highScore}
+          isNewHighScore={score >= highScore && score > 0}
+          onRestart={startGame}
+        />
+      )}
     </div>
   );
 }

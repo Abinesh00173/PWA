@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay, GameOverOverlay } from '../components/StartOverlay';
 
 const WORDS = ['javascript', 'python', 'gaming', 'programming', 'development', 'puzzle', 'challenge', 'awesome', 'typescript', 'react'];
 
@@ -9,21 +11,51 @@ export default function TypingGame({ goHome }) {
   const [accuracy, setAccuracy] = useState(100);
   const [timeLeft, setTimeLeft] = useState(60);
   const [gameOver, setGameOver] = useState(false);
+  const [gameStatus, setGameStatus] = useState('start');
+  const [highScore, setHighScore] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
 
   useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    setHighScore(parseInt(localStorage.getItem('typing_score')) || 0);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const startGame = () => {
+    setCurrentWordIdx(0);
+    setTypedText('');
+    setScore(0);
+    setAccuracy(100);
+    setTimeLeft(60);
+    setGameOver(false);
+    setIsNewHighScore(false);
+    setGameStatus('playing');
+  };
+
+  useEffect(() => {
+    if (gameStatus !== 'playing') return;
     if (timeLeft <= 0) {
       setGameOver(true);
-      localStorage.setItem('typing_score', Math.max(parseInt(localStorage.getItem('typing_score')) || 0, score));
+      const saved = parseInt(localStorage.getItem('typing_score')) || 0;
+      if (score > saved) {
+        localStorage.setItem('typing_score', score);
+        setIsNewHighScore(true);
+        setHighScore(score);
+      }
+      setGameStatus('gameover');
       return;
     }
 
     const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, score]);
+  }, [timeLeft, score, gameStatus]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (gameOver) return;
+      if (gameOver || gameStatus !== 'playing') return;
       
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
@@ -51,22 +83,20 @@ export default function TypingGame({ goHome }) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [typedText, currentWordIdx, gameOver, score, accuracy]);
+  }, [typedText, currentWordIdx, gameOver, score, accuracy, gameStatus]);
 
   if (gameOver) {
     return (
       <div className="screen">
-        <div className="game-header">
-          <button className="back-btn" onClick={goHome}>← Back</button>
-          <h3>Typing Game</h3>
-          <span>{score}</span>
-        </div>
+        <GameHeaderBar onBack={goHome} title="Typing Game" score={score} showBest={false} />
         <div className="game-canvas-container">
-          <div style={{ textAlign: 'center', padding: '40px', fontSize: '1.5em' }}>
-            <div style={{ marginBottom: '20px' }}>⌨️ Time&apos;s Up!</div>
-            <div style={{ fontSize: '2em', marginBottom: '20px', fontWeight: 'bold' }}>Final Score: {score}</div>
-            <button onClick={goHome} style={{ padding: '10px 20px', fontSize: '1em', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Back to Home</button>
-          </div>
+          <GameOverOverlay
+            isDesktop={isDesktop}
+            score={score}
+            highScore={highScore}
+            isNewHighScore={isNewHighScore}
+            onRestart={startGame}
+          />
         </div>
       </div>
     );
@@ -74,12 +104,24 @@ export default function TypingGame({ goHome }) {
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Typing Game</h3>
-        <span>{score}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Typing Game" score={score} showBest={false} />
       <div className="game-canvas-container">
+        {gameStatus === 'start' && (
+          <StartOverlay
+            isDesktop={isDesktop}
+            icon="⌨️"
+            title="TYPING"
+            subtitle="Speed Test"
+            features={[
+              { icon: '📝', text: 'Type' },
+              { icon: '🎯', text: 'Accuracy' },
+              { icon: '⚡', text: 'Speed' }
+            ]}
+            onStart={startGame}
+            highScore={highScore}
+          />
+        )}
+        {gameStatus === 'playing' && (
         <div style={{ padding: '20px', textAlign: 'center' }}>
           <div style={{ fontSize: '0.9em', marginBottom: '10px' }}>Time: {timeLeft}s | Accuracy: {accuracy}%</div>
           <div style={{ fontSize: '2em', marginBottom: '20px', fontWeight: 'bold', backgroundColor: '#2c3e50', padding: '10px', borderRadius: '5px' }}>
@@ -98,6 +140,7 @@ export default function TypingGame({ goHome }) {
           </div>
           <div style={{ fontSize: '0.9em', color: '#bdc3c7' }}>Type the word and press Space to submit</div>
         </div>
+        )}
       </div>
     </div>
   );

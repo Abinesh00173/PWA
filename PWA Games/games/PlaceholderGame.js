@@ -1,11 +1,9 @@
+import { GameHeaderBar } from '../components/GameUIComponents';
+
 export default function PlaceholderGame({ name, goHome }) {
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>{name}</h3>
-        <span>0</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title={name} score={0} showBest={false} />
       <div className="game-canvas-container">
         <div style={{ padding: '50px', textAlign: 'center', fontSize: '1.5em', color: 'var(--text)' }}>
           {name} - Coming Soon!

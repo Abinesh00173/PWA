@@ -1,14 +1,28 @@
 import { useState, useEffect } from 'react';
+import { GameHeaderBar } from '../components/GameUIComponents';
+import { StartOverlay } from '../components/StartOverlay';
 
 export default function TicTacToeGame({ goHome }) {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [isXNext, setIsXNext] = useState(true);
   const [scores, setScores] = useState({ player: 0, ai: 0 });
+  const [gameStatus, setGameStatus] = useState('start');
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
     const saved = parseInt(localStorage.getItem('tictactoe_score')) || 0;
-    setScores({ ...scores, player: saved });
+    setScores({ player: saved, ai: 0 });
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const startGame = () => {
+    setBoard(Array(9).fill(null));
+    setIsXNext(true);
+    setGameStatus('playing');
+  };
 
   const calculateWinner = (squares) => {
     const lines = [
@@ -66,7 +80,7 @@ export default function TicTacToeGame({ goHome }) {
   };
 
   const handleClick = (index) => {
-    if (board[index] || calculateWinner(board) || !isXNext) return;
+    if (board[index] || calculateWinner(board) || !isXNext || gameStatus !== 'playing') return;
 
     const newBoard = [...board];
     newBoard[index] = 'X';
@@ -97,12 +111,24 @@ export default function TicTacToeGame({ goHome }) {
 
   return (
     <div className="screen">
-      <div className="game-header">
-        <button className="back-btn" onClick={goHome}>← Back</button>
-        <h3>Tic Tac Toe</h3>
-        <span>{scores.player}</span>
-      </div>
+      <GameHeaderBar onBack={goHome} title="Tic Tac Toe" score={scores.player} showBest={false} />
       <div className="game-canvas-container">
+        {gameStatus === 'start' && (
+          <StartOverlay
+            isDesktop={isDesktop}
+            icon="⭕"
+            title="TIC TAC TOE"
+            subtitle="Classic Game"
+            features={[
+              { icon: '❌', text: 'Place' },
+              { icon: '🛡️', text: 'Block' },
+              { icon: '🏆', text: 'Win' }
+            ]}
+            onStart={startGame}
+            highScore={0}
+          />
+        )}
+        {gameStatus === 'playing' && (
         <div style={{ textAlign: 'center', padding: '20px' }}>
           <div style={{ fontSize: '1.2em', marginBottom: '20px', fontWeight: 'bold' }}>{status}</div>
           <div style={{
@@ -148,6 +174,7 @@ export default function TicTacToeGame({ goHome }) {
             New Game
           </button>
         </div>
+        )}
       </div>
     </div>
   );
